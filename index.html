@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설문조사 통합 사이트 - School Survey Hub</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode JS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="font-sans antialiased text-slate-800 bg-slate-50 flex flex-col min-h-screen">
+
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo & Title -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+                        <i class="fa-solid fa-clipboard-list text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-slate-900 leading-tight">설문조사 통합 사이트</h1>
+                        <p class="text-xs text-slate-500 hidden sm:block">School Survey Hub (실시간 공유)</p>
+                    </div>
+                </div>
+
+                <!-- Action Controls: QR Code Generator & Points -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Real-time Status Indicator -->
+                    <div id="sync-status" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="sync-status-text">실시간 동기화 중</span>
+                    </div>
+
+                    <button onclick="openQrModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 rounded-full text-xs font-bold transition shadow-sm">
+                        <i class="fa-solid fa-qrcode text-indigo-600"></i>
+                        <span>QR코드 공유</span>
+                    </button>
+
+                    <!-- User Points Pill -->
+                    <div class="flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200/70 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm">
+                        <i class="fa-solid fa-coins text-amber-500"></i>
+                        <span>내 포인트: <span id="user-points">120</span>P</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+
+        <!-- Hero Welcome Banner -->
+        <section class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-slate-900 text-white p-6 sm:p-8 shadow-xl">
+            <div class="relative z-10 max-w-2xl">
+                <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur text-xs font-semibold rounded-full mb-3 text-sky-100">실시간 클라우드 공유 플랫폼</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">우리 학교 모든 설문조사,<br class="hidden sm:inline">모두 함께 실시간으로 확인하세요!</h2>
+                <p class="mt-2 text-sm sm:text-base text-sky-100/90 leading-relaxed">
+                    구글 폼, 네이버 폼 등 다양한 학교 설문 링크를 등록하면 다른 친구들에게도 즉시 공유됩니다.
+                </p>
+            </div>
+            
+            <!-- Quick Stats & Actions -->
+            <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3 relative z-10 pt-4 border-t border-white/10">
+                <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
+                    <div class="text-xs text-sky-200">등록된 총 설문 수</div>
+                    <div class="text-xl font-bold mt-1" id="stat-total-surveys">0</div>
+                    <div class="text-[10px] text-sky-300 mt-0.5">실시간 동기화됨</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10">
+                    <div class="text-xs text-amber-200">마감 임박 설문</div>
+                    <div class="text-xl font-bold text-amber-300 mt-1" id="stat-urgent-surveys">0</div>
+                    <div class="text-[10px] text-amber-200/80 mt-0.5">우선 참여 항목</div>
+                </div>
+                <div class="col-span-2 sm:col-span-1 bg-white/10 backdrop-blur rounded-xl p-3 border border-white/10 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-sky-200">새 링크 추가</div>
+                        <div class="text-sm font-semibold mt-1">설문 등록하기</div>
+                        <div class="text-[10px] text-sky-300">구글/네이버 폼 등록</div>
+                    </div>
+                    <button onclick="openRegisterModal()" class="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-slate-900 rounded-lg text-xs font-bold transition shadow">
+                        <i class="fa-solid fa-plus mr-1"></i>등록
+                    </button>
+                </div>
+            </div>
+
+            <!-- Background Decorative Circles -->
+            <div class="absolute -right-10 -bottom-10 w-60 h-60 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute right-40 -top-10 w-40 h-40 bg-sky-400/20 rounded-full blur-xl pointer-events-none"></div>
+        </section>
+
+        <!-- SECTION: Survey Board -->
+        <section id="survey-section" class="scroll-mt-20">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical text-sky-500"></i>
+                        설문조사 통합 게시판
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">원하는 카테고리를 선택하거나 새로운 설문 링크를 추가할 수 있습니다.</p>
+                </div>
+                <button onclick="openRegisterModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-sky-500/20 transition">
+                    <i class="fa-solid fa-link"></i>
+                    새 설문/링크 등록하기
+                </button>
+            </div>
+
+            <!-- Category Filters & Tabs -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                <div class="flex flex-wrap items-center gap-1.5" id="category-filters">
+                    <button data-cat="all" class="cat-btn active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 text-white transition">전체 보기</button>
+                    <button data-cat="urgent" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">🔥 마감임박</button>
+                    <button data-cat="academic" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">🏫 학교/학사</button>
+                    <button data-cat="facility" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">🍕 급식/시설</button>
+                    <button data-cat="student" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">🎈 학생회/행사</button>
+                    <button data-cat="club" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition">🧩 동아리/창체</button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="w-full lg:w-64">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="survey-search" placeholder="설문 제목 검색..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Survey List Grid -->
+            <div id="survey-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-surveys" class="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-sky-500 mb-3"></i>
+                <p class="text-sm font-medium text-slate-600">설문 목록을 불러오는 중...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-surveys" class="hidden text-center py-12 bg-white rounded-2xl border border-dashed border-slate-300">
+                <i class="fa-solid fa-folder-open text-4xl text-slate-300 mb-3"></i>
+                <p class="text-sm font-medium text-slate-600">등록된 설문조사가 없습니다.</p>
+                <p class="text-xs text-slate-400 mt-1">상단의 [새 설문/링크 등록하기] 버튼을 눌러 추가해보세요!</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500">
+        <p>© 2026 School Survey Hub. All rights reserved.</p>
+    </footer>
+
+    <!-- Survey Registration Modal -->
+    <div id="register-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeRegisterModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-sky-500"></i>
+                설문 / 링크 등록하기
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">구글 폼, 네이버 폼 등 공유할 설문 링크 정보를 입력해주세요.</p>
+
+            <form id="add-survey-form" onsubmit="handleFormSubmit(event)" class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">설문 제목 *</label>
+                    <input type="text" id="form-title" required placeholder="예: 2026학년도 급식 만족도 조사" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">카테고리 *</label>
+                        <select id="form-category" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="academic">🏫 학교/학사</option>
+                            <option value="facility">🍕 급식/시설</option>
+                            <option value="student">🎈 학생회/행사</option>
+                            <option value="club">🧩 동아리/창체</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">마감일 (D-Day)</label>
+                        <input type="date" id="form-date" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">설문 대상</label>
+                        <input type="text" id="form-target" placeholder="예: 전교생" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">마감 임박 여부</label>
+                        <select id="form-urgent" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="false">일반 진행중</option>
+                            <option value="true">🔥 마감 임박</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">설문 링크 URL *</label>
+                    <input type="url" id="form-url" required placeholder="https://forms.google.com/..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">설문 상세 설명</label>
+                    <textarea id="form-desc" rows="3" placeholder="간단한 안내를 입력하세요." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-sky-500"></textarea>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
+                    <button type="button" onclick="closeRegisterModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition">취소</button>
+                    <button type="submit" id="submit-btn" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold transition shadow-md shadow-sky-500/20">등록 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center relative">
+            <button onclick="closeQrModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">QR 코드로 공유하기</h3>
+            <p class="text-xs text-slate-500 mb-3">스마트폰으로 스캔하여 접속하세요.</p>
+
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex justify-center mb-3">
+                <div id="qrcode"></div>
+            </div>
+
+            <div class="flex items-center gap-1.5 mb-3">
+                <input type="text" id="qr-url-input" class="flex-grow px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-mono">
+                <button onclick="updateQrUrl()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold">변경</button>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="copyCurrentUrl()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold">URL 복사</button>
+                <button onclick="closeQrModal()" class="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 text-xs flex items-center gap-3">
+        <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div>
+            <div id="toast-title" class="font-bold">알림</div>
+            <div id="toast-msg" class="text-slate-300 mt-0.5">내용</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global application state
+        let state = { surveys: [], filterCategory: 'all', searchQuery: '', userPoints: 120, activeQrUrl: '' };
+        let db, auth, userId = null;
+
+        window.onload = async function() {
+            // LocalStorage points fallback initialization
+            const pts = localStorage.getItem('school_surveys_pts');
+            if (pts) state.userPoints = parseInt(pts) || 120;
+            document.getElementById('user-points').innerText = state.userPoints;
+
+            setupEvents();
+
+            // Initialize Firebase Cloud Storage with strict error safety and offline fallback
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'school-survey-hub-app';
+                const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+                if (!firebaseConfig) {
+                    throw new Error("Missing Firebase config");
+                }
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Authenticate first before accessing Firestore using custom token or anonymous login
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+
+                // Strict Firestore public path rule adherence
+                const surveysColRef = collection(db, 'artifacts', appId, 'public', 'data', 'surveys');
+                
+                // Real-time listener with error callback
+                onSnapshot(surveysColRef, (snapshot) => {
+                    const loadedSurveys = [];
+                    snapshot.forEach((docSnap) => {
+                        loadedSurveys.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                    
+                    // Sort by newest first in memory
+                    loadedSurveys.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    state.surveys = loadedSurveys;
+
+                    // Cache locally as backup
+                    localStorage.setItem('school_surveys_hub_fallback', JSON.stringify(state.surveys));
+
+                    document.getElementById('loading-surveys').classList.add('hidden');
+                    document.getElementById('sync-status-text').innerText = '실시간 동기화 중';
+                    render();
+                    updateStats();
+                }, (error) => {
+                    console.error("Firestore sync error:", error);
+                    fallbackToLocalStorage("클라우드 연결이 원활하지 않아 로컬 데이터를 불러왔습니다.");
+                });
+
+            } catch (err) {
+                console.warn("Firebase init skipped or failed, using local storage mode:", err);
+                fallbackToLocalStorage("오프라인 모드로 실행 중입니다.");
+            }
+        };
+
+        function fallbackToLocalStorage(msg) {
+            const saved = localStorage.getItem('school_surveys_hub_fallback');
+            if (saved) {
+                try { state.surveys = JSON.parse(saved); } catch(e) { state.surveys = []; }
+            }
+            document.getElementById('loading-surveys').classList.add('hidden');
+            const statusBadge = document.getElementById('sync-status');
+            statusBadge.className = "hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full text-[11px] font-medium";
+            document.getElementById('sync-status-text').innerText = '오프라인 저장 모드';
+            render();
+            updateStats();
+            showToast('알림', msg);
+        }
+
+        function setupEvents() {
+            document.querySelectorAll('#category-filters button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#category-filters button').forEach(b => {
+                        b.className = "cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 transition";
+                    });
+                    btn.className = "cat-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 text-white transition";
+                    state.filterCategory = btn.dataset.cat;
+                    render();
+                });
+            });
+
+            document.getElementById('survey-search').addEventListener('input', e => {
+                state.searchQuery = e.target.value.trim().toLowerCase();
+                render();
+            });
+        }
+
+        window.render = function() {
+            const grid = document.getElementById('survey-grid');
+            const empty = document.getElementById('empty-surveys');
+            grid.innerHTML = '';
+
+            let filtered = state.surveys.filter(s => {
+                if (state.filterCategory === 'urgent' && !s.isUrgent) return false;
+                if (state.filterCategory !== 'all' && state.filterCategory !== 'urgent' && s.category !== state.filterCategory) return false;
+                if (state.searchQuery && !s.title.toLowerCase().includes(state.searchQuery) && !s.desc.toLowerCase().includes(state.searchQuery)) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                filtered.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl border border-slate-200 hover:border-sky-300 hover:shadow-md p-5 flex flex-col justify-between transition relative overflow-hidden";
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md">${s.catLabel}</span>
+                                <div class="flex items-center gap-1.5">
+                                    ${s.isUrgent ? '<span class="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full"><i class="fa-solid fa-fire"></i> 마감임박</span>' : ''}
+                                    <button onclick="window.removeSurvey('${s.id}')" class="text-slate-400 hover:text-rose-500 text-xs p-1"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                            <h3 class="text-sm font-bold text-slate-900">${escapeHtml(s.title)}</h3>
+                            <p class="text-xs text-slate-500 mt-2 line-clamp-2">${escapeHtml(s.desc)}</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 space-y-3">
+                            <div class="flex justify-between text-[11px] text-slate-500">
+                                <span>대상: ${escapeHtml(s.target)}</span>
+                                <span>마감: ${s.date}</span>
+                            </div>
+                            <a href="${escapeHtml(s.url)}" target="_blank" onclick="window.earnPoint('${s.id}', 10)" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> 설문 참여 (+10P)
+                            </a>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+            document.getElementById('user-points').innerText = state.userPoints;
+        }
+
+        window.removeSurvey = async function(id) {
+            if (!db || !auth || !auth.currentUser) {
+                state.surveys = state.surveys.filter(s => s.id !== id);
+                localStorage.setItem('school_surveys_hub_fallback', JSON.stringify(state.surveys));
+                render();
+                updateStats();
+                showToast('삭제 완료', '설문이 삭제되었습니다.');
+                return;
+            }
+
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'school-survey-hub-app';
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'surveys', id));
+                showToast('삭제 완료', '실시간으로 설문이 삭제되었습니다.');
+            } catch (err) {
+                console.error("Delete failed:", err);
+                showToast('오류', '설문 삭제 중 문제가 발생했습니다.');
+            }
+        };
+
+        window.earnPoint = function(id, pts) {
+            state.userPoints += pts;
+            localStorage.setItem('school_surveys_pts', state.userPoints);
+            showToast('포인트 획득!', `설문 참여로 ${pts}P가 적립되었습니다.`);
+            document.getElementById('user-points').innerText = state.userPoints;
+        };
+
+        window.updateStats = function() {
+            document.getElementById('stat-total-surveys').innerText = state.surveys.length;
+            document.getElementById('stat-urgent-surveys').innerText = state.surveys.filter(s => s.isUrgent).length;
+        };
+
+        window.openRegisterModal = function() { document.getElementById('register-modal').classList.remove('hidden'); }
+        window.closeRegisterModal = function() { document.getElementById('register-modal').classList.add('hidden'); document.getElementById('add-survey-form').reset(); }
+
+        window.handleFormSubmit = async function(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = '등록 중...';
+
+            const title = document.getElementById('form-title').value.trim();
+            const category = document.getElementById('form-category').value;
+            const date = document.getElementById('form-date').value || '2026-03-31';
+            const target = document.getElementById('form-target').value.trim() || '전교생';
+            const isUrgent = document.getElementById('form-urgent').value === 'true';
+            const url = document.getElementById('form-url').value.trim();
+            const desc = document.getElementById('form-desc').value.trim() || '설문 안내';
+
+            const labels = { academic: '🏫 학교/학사', facility: '🍕 급식/시설', student: '🎈 학생회/행사', club: '🧩 동아리/창체' };
+
+            const newSurveyData = {
+                title,
+                category,
+                catLabel: labels[category],
+                target,
+                date,
+                isUrgent,
+                url,
+                desc,
+                createdAt: Date.now(),
+                authorId: userId || 'anonymous'
+            };
+
+            try {
+                if (!db || !auth || !auth.currentUser) {
+                    newSurveyData.id = 's_' + Date.now();
+                    state.surveys.unshift(newSurveyData);
+                    localStorage.setItem('school_surveys_hub_fallback', JSON.stringify(state.surveys));
+                    render();
+                    updateStats();
+                } else {
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'school-survey-hub-app';
+                    const surveysColRef = collection(db, 'artifacts', appId, 'public', 'data', 'surveys');
+                    await addDoc(surveysColRef, newSurveyData);
+                }
+
+                closeRegisterModal();
+                showToast('등록 완료!', '다른 친구들의 화면에도 실시간으로 공유되었습니다.');
+            } catch (err) {
+                console.error("Failed to add survey:", err);
+                showToast('오류', '설문 등록 중 오류가 발생했습니다.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = '등록 완료';
+            }
+        };
+
+        window.openQrModal = function() {
+            const url = state.activeQrUrl || window.location.href;
+            document.getElementById('qr-url-input').value = url;
+            makeQr(url);
+            document.getElementById('qr-modal').classList.remove('hidden');
+        }
+        function makeQr(url) {
+            state.activeQrUrl = url;
+            const container = document.getElementById('qrcode');
+            container.innerHTML = '';
+            new QRCode(container, { text: url, width: 150, height: 150, colorDark: "#0f172a", colorLight: "#ffffff" });
+        }
+        window.updateQrUrl = function() {
+            const val = document.getElementById('qr-url-input').value.trim();
+            if (val) makeQr(val);
+        }
+        window.closeQrModal = function() { document.getElementById('qr-modal').classList.add('hidden'); }
+        window.copyCurrentUrl = function() {
+            const input = document.createElement('input');
+            document.body.appendChild(input);
+            input.value = state.activeQrUrl || window.location.href;
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast('복사 완료', '주소가 복사되었습니다!');
+        }
+
+        function showToast(title, msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
